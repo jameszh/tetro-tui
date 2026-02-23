@@ -207,18 +207,21 @@ Game construction uses `falling_tetromino_engine::GameBuilder` with method chain
 
 Game variants (Puzzle, Cheese, Combo, Ascent) are implemented as composable modifiers (`src/game_mode_presets/game_modifiers/`). Each modifier implements the engine's `Modifier` trait with a `descriptor` (for serialization) and a `mod_function` (callback hook). Modifiers can be stacked and are reconstructed from saved descriptors for replay.
 
-### 5. Template Method — Generic Menu
+### 5. Parameterized Helper — Generic Menu
 
-`generic_menu()` in `src/application/menus/mod.rs` provides a reusable template for standard selection menus: render options → poll input → update selection → repeat. Individual menus customize the content and actions while reusing the navigation/rendering skeleton.
+`generic_menu()` in `src/application/menus/mod.rs` is a shared helper that encapsulates the render-poll-update loop for all simple selection menus. Callers pass different data (title + choices) rather than overriding behavior via subclassing.
 
-For example, `pause.rs` is just:
+This is **not** the Template Method pattern (which requires inheritance/trait overrides). It is straightforward **parameterized reuse** — the varying parts are injected as function arguments:
 
 ```rust
+// src/application/menus/pause.rs — the entire file
 fn run_menu_pause(&mut self) -> io::Result<MenuUpdate> {
     let selection = vec![Menu::NewGame, Menu::Settings, Menu::ScoresAndReplays, Menu::About, Menu::Quit];
     self.generic_menu("Game Paused", selection)
 }
 ```
+
+A true Template Method in Rust would use a trait with default methods and overridable steps — something this codebase intentionally avoids in favor of the simpler data-driven approach.
 
 ### 6. Observer Pattern — Feedback System
 
@@ -240,7 +243,7 @@ This prevents input polling from blocking the render loop.
 | **Strategy** | Renderer trait | Pluggable rendering implementations |
 | **Builder** | `falling_tetromino_engine::GameBuilder` | Game construction with chaining |
 | **Modifier** (Decorator-like) | `game_modifiers/*` | Composable game rule variations |
-| **Template Method** | `menus::generic_menu()` | Reusable menu rendering loop |
+| **Parameterized Helper** | `menus::generic_menu()` | Shared menu rendering loop via data injection |
 | **Observer** | Feedback system | Game events → UI messages |
 | **Enum Dispatch** | `Menu` enum | Runtime polymorphism without `dyn` trait |
 | **Double Buffering** | `DiffPrintRenderer` | Optimized terminal updates |
